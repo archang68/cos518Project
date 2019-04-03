@@ -1,0 +1,28 @@
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "COS518.GroupZero.ChainReplication";
+
+service ChainNode {
+    // set the object at a given key
+    rpc PutObject(CRPut) returns (CRObjectResponse) {}
+    // retreive the object at a given key
+    rpc GetObject(CRKey) returns (CRObjectResponse) {}
+}
+
+message CRObjectResponse {
+    bool present = 1;
+    CRObject object = 2;
+}
+
+message CRPut {
+    CRKey key = 1;
+    CRObject object = 2;
+}
+
+message CRKey {
+    int32 key = 1;
+}
+
+message CRObject {
+    bytes data = 1;
+}
