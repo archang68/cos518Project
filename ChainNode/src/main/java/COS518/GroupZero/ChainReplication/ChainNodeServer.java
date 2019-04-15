@@ -16,6 +16,11 @@ public class ChainNodeServer {
     private final int port;
     private final Server rpcServer;
 
+    // Private booleans defining the status of a chain node, whether it is a tail
+    // or head node or not...
+    private boolean isTail;
+    private boolean isHead;
+
     public ChainNodeServer(int port) {
         this.port = port;
         rpcServer = ServerBuilder.forPort(port).addService(new ChainNodeService()).build();
@@ -60,14 +65,39 @@ public class ChainNodeServer {
 
         @Override
         public void putObject(CRPut request, StreamObserver<CRObjectResponse> responseObserver) {
-            responseObserver.onNext(doInsert(request.getKey(), request.getObject()));
-            responseObserver.onCompleted();
+            if (isHead) {
+                responseObserver.onNext(doInsert(request.getKey(), request.getObject()));
+
+                // do we have to propagate the insert to the tail before completing/stating that
+                // this is completed?
+                responseObserver.onCompleted();
+
+                // we need to do some kind of recursive thing here...b/c we need to send back
+                // many onCompleted() back to the previous servers...argh...
+                // so basically we have to call putObject?
+
+                // Where to put this logic?
+
+                // need to hold onto the object until we get the confirmation from the propagation
+
+
+            } else {
+
+                // add necessary logic for forwarding the request to the head node
+                // should we just maintain the head node of the chain somewhere to make lives easier
+
+            }
         }
 
         @Override
         public void getObject(CRKey request, StreamObserver<CRObjectResponse> responseObserver) {
-            responseObserver.onNext(doRetrieve(request));
-            responseObserver.onCompleted();
+            if (isTail) {
+                responseObserver.onNext(doRetrieve(request));
+                responseObserver.onCompleted();
+            } else {
+                // Add logic for forwarding the request to the tail node - if we can track
+                // the tail + head node, don't need to walk down the successor chain
+            }
         }
 
         private CRObjectResponse doInsert(CRKey key, CRObject object) {
