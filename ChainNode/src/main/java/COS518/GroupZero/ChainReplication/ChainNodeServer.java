@@ -6,6 +6,7 @@ import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -20,6 +21,11 @@ public class ChainNodeServer {
     // or head node or not...
     private boolean isTail;
     private boolean isHead;
+
+    // various interfaces for remote nodes
+    private RemoteNodeRPC headNode;
+    private RemoteNodeRPC successorNode;
+    private RemoteNodeRPC tailNode;
 
     public ChainNodeServer(int port) {
         this.port = port;
@@ -98,6 +104,49 @@ public class ChainNodeServer {
                 // Add logic for forwarding the request to the tail node - if we can track
                 // the tail + head node, don't need to walk down the successor chain
             }
+        }
+
+        @Override
+        public void propagateWrite(CRPut request, StreamObserver<CRObjectResponse> responseObserver) {
+            // TODO: write to local storage then propagate to successor
+
+        }
+
+        @Override
+        public void updateHeadNode(CRNodeID nodeID, StreamObserver<UpdateStatus> responseObserver) {
+            // TODO: same as updateSuccessor, but with the head node
+        }
+
+        @Override
+        public void updateSuccessor(CRNodeID nodeID, StreamObserver<UpdateStatus> responseObserver) {
+            RemoteNodeRPC newSuccessor;
+            boolean success;
+
+            try {
+                // try to create the new remote node
+                newSuccessor = new RemoteNodeRPC(nodeID);
+                success = true;
+
+                // if successful, close the old node and replace it
+                successorNode.close();
+                successorNode = newSuccessor;
+
+            } catch (UnknownHostException e) {
+                // keep old node if unsuccessful
+                success = false;
+            }
+
+            // send the response containing the success status (true or false)
+            UpdateStatus response = UpdateStatus.newBuilder().setSuccess(success).build();
+            responseObserver.onNext(response);
+
+            // complete the RPC
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void updateTailNode(CRNodeID nodeID, StreamObserver<UpdateStatus> responseObserver) {
+            // TODO: same as updateSuccessor, but with the tail node
         }
 
         private CRObjectResponse doInsert(CRKey key, CRObject object) {
