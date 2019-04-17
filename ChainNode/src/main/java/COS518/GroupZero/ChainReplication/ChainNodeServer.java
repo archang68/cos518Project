@@ -69,28 +69,27 @@ public class ChainNodeServer {
          */
         private ConcurrentHashMap<Integer, CRObject> objectStore = new ConcurrentHashMap<>();
 
+        /**
+         * This is a special in-memory object store that is used for tracking writes that need to be
+         * propagated across the nodes
+         */
+        private ConcurrentHashMap<Integer, CRObject> tempObjectStore = new ConcurrentHashMap<>();
+
         @Override
         public void putObject(CRPut request, StreamObserver<CRObjectResponse> responseObserver) {
             if (isHead) {
                 responseObserver.onNext(doInsert(request.getKey(), request.getObject()));
 
-                // do we have to propagate the insert to the tail before completing/stating that
-                // this is completed?
+                // TODO: completely unclear if this is right.
+                propagateWrite(request, responseObserver);
+
                 responseObserver.onCompleted();
-
-                // we need to do some kind of recursive thing here...b/c we need to send back
-                // many onCompleted() back to the previous servers...argh...
-                // so basically we have to call putObject?
-
-                // Where to put this logic?
-
-                // need to hold onto the object until we get the confirmation from the propagation
-
 
             } else {
 
-                // add necessary logic for forwarding the request to the head node
-                // should we just maintain the head node of the chain somewhere to make lives easier
+                // Referring the request to the head node
+                responseObserver.onNext(headNode.blockingPropagateWrite(request));
+                responseObserver.onCompleted();
 
             }
         }
@@ -101,20 +100,59 @@ public class ChainNodeServer {
                 responseObserver.onNext(doRetrieve(request));
                 responseObserver.onCompleted();
             } else {
-                // Add logic for forwarding the request to the tail node - if we can track
-                // the tail + head node, don't need to walk down the successor chain
+                // orwarding the request to the tail node
+                responseObserver.onNext(tailNode.blockingPropagateRead(request));
+                responseObserver.onCompleted();
             }
         }
 
         @Override
         public void propagateWrite(CRPut request, StreamObserver<CRObjectResponse> responseObserver) {
-            // TODO: write to local storage then propagate to successor
+            // TODO: write to local storage then propagate to successor. also unclear
+
+            // Writing the key, value pair to local storage
+            int objectKey = request.getKey().getKey();
+            CRObject object = request.getObject();
+
+            CRObject oldObject = tempObjectStore.put(objectKey, object);
+
+            // set the response to present == false if previous was null, otherwise return previous value
+            CRObjectResponse objectResponse;
+
+            if (oldObject == null) {
+                objectResponse = CRObjectResponse.newBuilder().setPresent(false).build();
+            } else {
+                objectResponse = CRObjectResponse.newBuilder().setPresent(true).setObject(oldObject).build();
+            }
+
+            if (!isTail && successorNode != null) {
+                responseObserver.onNext(successorNode.blockingPropagateWrite(request));
+                responseObserver.onCompleted();
+            }
 
         }
 
         @Override
         public void updateHeadNode(CRNodeID nodeID, StreamObserver<UpdateStatus> responseObserver) {
-            // TODO: same as updateSuccessor, but with the head node
+
+            RemoteNodeRPC newHead;
+            boolean success;
+
+            try {
+                newHead = new RemoteNodeRPC(nodeID);
+                success = true;
+
+                headNode.close();
+                headNode = newHead;
+
+            } catch (UnknownHostException e) {
+                success = false;
+            }
+
+            UpdateStatus response = UpdateStatus.newBuilder().setSuccess(success).build();
+            responseObserver.onNext(response);
+
+            responseObserver.onCompleted();
         }
 
         @Override
@@ -146,7 +184,25 @@ public class ChainNodeServer {
 
         @Override
         public void updateTailNode(CRNodeID nodeID, StreamObserver<UpdateStatus> responseObserver) {
-            // TODO: same as updateSuccessor, but with the tail node
+
+            RemoteNodeRPC newTail;
+            boolean success;
+
+            try {
+                newTail = new RemoteNodeRPC(nodeID);
+                success = true;
+
+                tailNode.close();
+                tailNode = newTail;
+
+            } catch (UnknownHostException e) {
+                success = false;
+            }
+
+            UpdateStatus response = UpdateStatus.newBuilder().setSuccess(success).build();
+            responseObserver.onNext(response);
+
+            responseObserver.onCompleted();
         }
 
         private CRObjectResponse doInsert(CRKey key, CRObject object) {
