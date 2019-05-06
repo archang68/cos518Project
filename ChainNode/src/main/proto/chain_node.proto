@@ -1,0 +1,46 @@
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "COS518.GroupZero.ChainReplication";
+
+service ChainNode {
+    // (public interface) set the object at a given key
+    rpc PutObject(CRPut) returns (CRObjectResponse) {}
+    // (public interface) retrieve the object at a given key
+    rpc GetObject(CRKey) returns (CRObjectResponse) {}
+
+    // receive a propagated write from predecessor and send to successor
+    rpc PropagateWrite(CRPut) returns (CRObjectResponse) {}
+    // update the node's internal state for correct head node
+    rpc UpdateHeadNode(CRNodeID) returns (UpdateStatus) {}
+    // update the node's internal state for correct successor
+    rpc UpdateSuccessor(CRNodeID) returns (UpdateStatus) {}
+    // update the node's internal state for correct tail node
+    rpc UpdateTailNode(CRNodeID) returns (UpdateStatus) {}
+}
+
+message CRObjectResponse {
+    bool present = 1;
+    CRObject object = 2;
+}
+
+message CRPut {
+    CRKey key = 1;
+    CRObject object = 2;
+}
+
+message CRKey {
+    int32 key = 1;
+}
+
+message CRObject {
+    bytes data = 1;
+}
+
+message CRNodeID {
+    int32 address = 1;  // store ipv4 address as 32-bit integer
+    int32 port = 2;
+}
+
+message UpdateStatus {
+    bool success = 1;
+}
