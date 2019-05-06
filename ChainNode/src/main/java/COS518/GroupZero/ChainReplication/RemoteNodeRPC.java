@@ -53,18 +53,7 @@ public class RemoteNodeRPC {
      * @param request put request containing key and object
      */
     public CRObjectResponse blockingPropagateWrite(CRPut request) {
-        return blockingStub.putObject(request);
-    }
-
-
-    /**
-     * Blocking RPC to referring a read down the chain to this remote node. The caller of the method should be
-     * responsible for handling the response.
-     *
-     * @param request get request containing key
-     */
-    public CRObjectResponse blockingPropagateRead(CRKey request) {
-        return blockingStub.getObject(request);
+        return blockingStub.propagateWrite(request);
     }
 
     /**
