@@ -1,0 +1,18 @@
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "COS518.GroupZero.ChainReplication";
+
+service ChainMaster {
+    // (public interface) get the server location for the head node
+    rpc GetHead(HeadRequest) returns (CRNodeID) {}
+    // (public interface) get the server location for the tail node
+    rpc GetTail(TailRequest) returns (CRNodeID) {}
+}
+
+message HeadRequest {}
+message TailRequest {}
+
+message CRNodeID {
+    int32 address = 1;  // store ipv4 address as 32-bit integer
+    int32 port = 2;
+}
