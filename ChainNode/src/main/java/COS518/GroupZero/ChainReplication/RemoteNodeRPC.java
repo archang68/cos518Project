@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 public class RemoteNodeRPC {
 
     private final String host;
+    private final int ip;
     private final int port;
 
     private final ManagedChannel channel;
@@ -37,7 +38,8 @@ public class RemoteNodeRPC {
      * @param host IPv4 address of remote node
      * @param port tcp port of remote node
      */
-    public RemoteNodeRPC(String host, int port) {
+    public RemoteNodeRPC(String host, int port) throws UnknownHostException {
+        this.ip = stringToIP(host);
         this.host = host;
         this.port = port;
 
@@ -113,6 +115,10 @@ public class RemoteNodeRPC {
         return response.getSuccess();
     }
 
+    public CRNodeID getID() {
+        return CRNodeID.newBuilder().setAddress(ip).setPort(port).build();
+    }
+
     /**
      * Cleanup the channel when it is no longer needed.
      */
@@ -131,7 +137,7 @@ public class RemoteNodeRPC {
      * @return string representation of address
      * @throws UnknownHostException if the address is malformed or inaccessible
      */
-    private static String intToIP(int intAddress) throws UnknownHostException {
+    public static String intToIP(int intAddress) throws UnknownHostException {
         byte[] addressBytes = BigInteger.valueOf(intAddress).toByteArray();
         return InetAddress.getByAddress(addressBytes).getHostAddress();
     }
@@ -143,7 +149,7 @@ public class RemoteNodeRPC {
      * @return integer value of ip address
      * @throws UnknownHostException if the address is malformed or inaccessible
      */
-    private static int stringToIP(String ip) throws UnknownHostException {
+    public static int stringToIP(String ip) throws UnknownHostException {
         byte[] addressBytes = InetAddress.getByName(ip).getAddress();
         return (new BigInteger(addressBytes)).intValue();
     }
