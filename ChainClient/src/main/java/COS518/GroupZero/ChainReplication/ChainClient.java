@@ -20,7 +20,7 @@ public class ChainClient {
     // private final ChainNodeGrpc.ChainNodeStub asyncStub;
 
     private ManagedChannel tailChannel;
-    private  ChainNodeGrpc.ChainNodeBlockingStub tailBlockingStub;
+    private ChainNodeGrpc.ChainNodeBlockingStub tailBlockingStub;
     // private final ChainNodeGrpc.ChainNodeStub asyncStub;
 
     public ChainClient(String masterHost, int masterPort) throws UnknownHostException {
@@ -62,7 +62,7 @@ public class ChainClient {
     /**
      * Put a string into the configured chain.
      *
-     * @param key key at which to place the string
+     * @param key    key at which to place the string
      * @param string string to place
      */
     public void putString(int key, String string) {

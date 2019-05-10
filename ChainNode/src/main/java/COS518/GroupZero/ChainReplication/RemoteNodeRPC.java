@@ -3,7 +3,6 @@ package COS518.GroupZero.ChainReplication;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import io.grpc.stub.StreamObservers;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -64,39 +63,48 @@ public class RemoteNodeRPC {
     public void nonBlockingUpdateHeadNode() {
         asyncStub.updateHeadNode(UpdateRoleMessage.getDefaultInstance(), new StreamObserver<UpdateStatus>() {
             @Override
-            public void onNext(UpdateStatus updateStatus) {}
+            public void onNext(UpdateStatus updateStatus) {
+            }
 
             @Override
-            public void onError(Throwable throwable) {}
+            public void onError(Throwable throwable) {
+            }
 
             @Override
-            public void onCompleted() {}
+            public void onCompleted() {
+            }
         });
     }
 
     public void nonBlockingUpdateSuccessor(CRNodeID nodeID) {
         asyncStub.updateSuccessor(nodeID, new StreamObserver<UpdateStatus>() {
             @Override
-            public void onNext(UpdateStatus updateStatus) {}
+            public void onNext(UpdateStatus updateStatus) {
+            }
 
             @Override
-            public void onError(Throwable throwable) {}
+            public void onError(Throwable throwable) {
+            }
 
             @Override
-            public void onCompleted() {}
+            public void onCompleted() {
+            }
         });
     }
 
     public void nonBlockingUpdateTailNode() {
         asyncStub.updateTailNode(UpdateRoleMessage.getDefaultInstance(), new StreamObserver<UpdateStatus>() {
             @Override
-            public void onNext(UpdateStatus updateStatus) {}
+            public void onNext(UpdateStatus updateStatus) {
+            }
 
             @Override
-            public void onError(Throwable throwable) {}
+            public void onError(Throwable throwable) {
+            }
 
             @Override
-            public void onCompleted() {}
+            public void onCompleted() {
+            }
         });
     }
 

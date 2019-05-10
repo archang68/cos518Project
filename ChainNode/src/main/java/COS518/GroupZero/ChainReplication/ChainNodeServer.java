@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 public class ChainNodeServer {
 
@@ -113,14 +112,14 @@ public class ChainNodeServer {
     private class ChainNodeService extends ChainNodeGrpc.ChainNodeImplBase {
 
         /**
-         * Temporary in-memory object store. Currently implemented with ConcurrentHashMap, which uses read-write locking
-         * for per-key write mutual exclusion.
+         * Temporary in-memory object store. Currently implemented with ConcurrentHashMap, which uses read-write
+         * locking for per-key write mutual exclusion.
          */
         private ConcurrentHashMap<Integer, CRObject> objectStore = new ConcurrentHashMap<>();
 
         /**
-         * This is a special in-memory object store that is used for tracking writes that need to be
-         * propagated across the nodes
+         * This is a special in-memory object store that is used for tracking writes that need to be propagated across
+         * the nodes
          */
         private ConcurrentHashMap<Integer, CRObject> tempObjectStore = new ConcurrentHashMap<>();
 
