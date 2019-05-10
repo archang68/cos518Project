@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 public class ChainNodeServer {
 
@@ -18,32 +19,21 @@ public class ChainNodeServer {
 
     // Private booleans defining the status of a chain node, whether it is a tail
     // or head node or not...
-    private final boolean isHead;
-    private final boolean isTail;
+    private boolean isHead;
+    private boolean isTail;
 
     // various interfaces for remote nodes
-    private RemoteNodeRPC headNode;
     private RemoteNodeRPC successorNode;
-    private RemoteNodeRPC tailNode;
 
     public ChainNodeServer(int port, boolean setHead, boolean setTail,
-                           String head, int headPort,
-                           String successor, int successorPort,
-                           String tail, int tailPort) {
+                           String successor, int successorPort) throws UnknownHostException {
 
         this.port = port;
         this.isHead = setHead;
         this.isTail = setTail;
 
-        if (isHead) {
+        if (!isTail) {
             successorNode = new RemoteNodeRPC(successor, successorPort);
-            tailNode = new RemoteNodeRPC(tail, tailPort);
-        } else if (isTail) {
-            headNode = new RemoteNodeRPC(head, headPort);
-        } else {
-            headNode = new RemoteNodeRPC(head, headPort);
-            successorNode = new RemoteNodeRPC(successor, successorPort);
-            tailNode = new RemoteNodeRPC(tail, tailPort);
         }
 
         rpcServer = ServerBuilder.forPort(port).addService(new ChainNodeService()).build();
@@ -100,44 +90,21 @@ public class ChainNodeServer {
         }
 
         // create server based on role
-        ChainNodeServer server;
+        String[] successor;
         if (initHead) {
-            // head must only have successor and tail
-            String[] successor = args[2].split(":");
-            String[] tail = args[3].split(":");
-
-            server = new ChainNodeServer(initPort, true, false,
-                    null, -1,
-                    successor[0], Integer.parseInt(successor[1]),
-                    tail[0], Integer.parseInt(tail[1])
-            );
-
             System.out.println("Starting Head Node");
+            successor = args[2].split(":");
         } else if (initTail) {
-            // tail must only have head
-            String[] head = args[2].split(":");
-
-            server = new ChainNodeServer(initPort, false, true,
-                    head[0], Integer.parseInt(head[1]),
-                    null, -1,
-                    null, -1
-            );
-
             System.out.println("Starting Tail Node");
+            successor = new String[2];
+            successor[0] = null;
+            successor[1] = "-1";
         } else {
-            // center must have head, successor, and tail
-            String[] head = args[2].split(":");
-            String[] successor = args[3].split(":");
-            String[] tail = args[4].split(":");
-
-            server = new ChainNodeServer(initPort, false, false,
-                    head[0], Integer.parseInt(head[1]),
-                    successor[0], Integer.parseInt(successor[1]),
-                    tail[0], Integer.parseInt(tail[1])
-            );
-
             System.out.println("Starting Center Node");
+            successor = args[2].split(":");
         }
+        ChainNodeServer server = new ChainNodeServer(initPort, initHead, initTail,
+                successor[0], Integer.parseInt(successor[1]));
 
         server.start();
         server.blockUntilShutdown();
@@ -159,15 +126,17 @@ public class ChainNodeServer {
 
         @Override
         public void putObject(CRPut request, StreamObserver<CRObjectResponse> responseObserver) {
+            logger.info("received put request for key " + request.getKey());
             if (isHead) {
                 // insert object into local store
                 CRObjectResponse inserted = doInsert(request.getKey(), request.getObject());
 
-                // propagate object to chain
-                CRObjectResponse propagated = successorNode.blockingPropagateWrite(request);
+                // propagate object to chain (unless head is also tail)
+                if (!isTail)
+                    inserted = successorNode.blockingPropagateWrite(request);
 
                 // return the object to requester after propagation
-                responseObserver.onNext(propagated);
+                responseObserver.onNext(inserted);
                 responseObserver.onCompleted();
 
             } else {
@@ -184,6 +153,7 @@ public class ChainNodeServer {
 
         @Override
         public void getObject(CRKey request, StreamObserver<CRObjectResponse> responseObserver) {
+            logger.info("received get request for key " + request.getKey());
             if (isTail) {
                 responseObserver.onNext(doRetrieve(request));
                 responseObserver.onCompleted();
@@ -200,6 +170,8 @@ public class ChainNodeServer {
 
         @Override
         public void propagateWrite(CRPut request, StreamObserver<CRObjectResponse> responseObserver) {
+            logger.info("received write-propagate request for key " + request.getKey());
+
             // writing the key, value pair to local storage
             CRObjectResponse inserted = doInsert(request.getKey(), request.getObject());
 
@@ -217,25 +189,12 @@ public class ChainNodeServer {
         }
 
         @Override
-        public void updateHeadNode(CRNodeID nodeID, StreamObserver<UpdateStatus> responseObserver) {
-            RemoteNodeRPC newHead;
-            boolean success;
-
-            try {
-                // try to create the new remote node
-                newHead = new RemoteNodeRPC(nodeID);
-                success = true;
-
-                // if successful, close the old node and replace it
-                headNode.close();
-                headNode = newHead;
-
-            } catch (UnknownHostException e) {
-                success = false;
-            }
+        public void updateHeadNode(UpdateRoleMessage update, StreamObserver<UpdateStatus> responseObserver) {
+            logger.info("I am new Head Node");
+            isHead = true;
 
             // send the response containing the success status (true or false)
-            UpdateStatus response = UpdateStatus.newBuilder().setSuccess(success).build();
+            UpdateStatus response = UpdateStatus.newBuilder().setSuccess(true).build();
             responseObserver.onNext(response);
 
             // complete the RPC
@@ -248,12 +207,17 @@ public class ChainNodeServer {
             boolean success;
 
             try {
+                logger.info("updating successor to " +
+                        RemoteNodeRPC.intToIP(nodeID.getAddress()) + ":" + nodeID.getPort());
+
                 // try to create the new remote node
                 newSuccessor = new RemoteNodeRPC(nodeID);
                 success = true;
 
                 // if successful, close the old node and replace it
-                successorNode.close();
+                if (successorNode != null) {
+                    successorNode.close();
+                }
                 successorNode = newSuccessor;
 
             } catch (UnknownHostException e) {
@@ -270,28 +234,24 @@ public class ChainNodeServer {
         }
 
         @Override
-        public void updateTailNode(CRNodeID nodeID, StreamObserver<UpdateStatus> responseObserver) {
-            RemoteNodeRPC newTail;
-            boolean success;
+        public void updateTailNode(UpdateRoleMessage update, StreamObserver<UpdateStatus> responseObserver) {
+            logger.info("I am new tail node.");
 
-            try {
-                // try to create the new remote node
-                newTail = new RemoteNodeRPC(nodeID);
-                success = true;
-
-                // if successful, close the old node and replace it
-                tailNode.close();
-                tailNode = newTail;
-
-            } catch (UnknownHostException e) {
-                success = false;
-            }
+            isTail = true;
 
             // send the response containing the success status (true or false)
-            UpdateStatus response = UpdateStatus.newBuilder().setSuccess(success).build();
+            UpdateStatus response = UpdateStatus.newBuilder().setSuccess(true).build();
             responseObserver.onNext(response);
 
             // complete the RPC
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void checkHeartbeat(CheckAliveMessage request, StreamObserver<Heartbeat> responseObserver) {
+            Heartbeat response = Heartbeat.newBuilder().setAlive(true).build();
+
+            responseObserver.onNext(response);
             responseObserver.onCompleted();
         }
 

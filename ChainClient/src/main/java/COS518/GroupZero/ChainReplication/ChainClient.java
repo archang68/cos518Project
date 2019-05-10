@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -11,27 +12,51 @@ import java.util.logging.Logger;
 public class ChainClient {
     private static final Logger logger = Logger.getLogger(ChainClient.class.getName());
 
-    private final ManagedChannel headChannel;
-    private final ChainNodeGrpc.ChainNodeBlockingStub headBlockingStub;
+    private final ManagedChannel masterChannel;
+    private final ChainMasterGrpc.ChainMasterBlockingStub masterBlockingStub;
+
+    private ManagedChannel headChannel;
+    private ChainNodeGrpc.ChainNodeBlockingStub headBlockingStub;
     // private final ChainNodeGrpc.ChainNodeStub asyncStub;
 
-    private final ManagedChannel tailChannel;
-    private final ChainNodeGrpc.ChainNodeBlockingStub tailBlockingStub;
+    private ManagedChannel tailChannel;
+    private  ChainNodeGrpc.ChainNodeBlockingStub tailBlockingStub;
     // private final ChainNodeGrpc.ChainNodeStub asyncStub;
 
-    public ChainClient(String headHost, int headPort, String tailHost, int tailPort) {
+    public ChainClient(String masterHost, int masterPort) throws UnknownHostException {
+        masterChannel = ManagedChannelBuilder.forAddress(masterHost, masterPort).usePlaintext().build();
+        masterBlockingStub = ChainMasterGrpc.newBlockingStub(masterChannel);
+
+        updateHeadTail();
+    }
+
+    public void shutdown() throws InterruptedException {
+        if (masterChannel != null)
+            masterChannel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+        if (headChannel != null)
+            headChannel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+        if (tailChannel != null)
+            tailChannel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+    }
+
+    private void updateHeadTail() throws UnknownHostException {
+        // get head node id
+        CRNodeID headNode = masterBlockingStub.getHead(HeadRequest.getDefaultInstance());
+        String headHost = RemoteNodeRPC.intToIP(headNode.getAddress());
+        int headPort = headNode.getPort();
+
         headChannel = ManagedChannelBuilder.forAddress(headHost, headPort).usePlaintext().build();
         headBlockingStub = ChainNodeGrpc.newBlockingStub(headChannel);
         // asyncStub = ChainNodeGrpc.newStub(headChannel);
 
+        // get tail node id
+        CRNodeID tailNode = masterBlockingStub.getTail(TailRequest.getDefaultInstance());
+        String tailHost = RemoteNodeRPC.intToIP(tailNode.getAddress());
+        int tailPort = tailNode.getPort();
+
         tailChannel = ManagedChannelBuilder.forAddress(tailHost, tailPort).usePlaintext().build();
         tailBlockingStub = ChainNodeGrpc.newBlockingStub(tailChannel);
         // asyncStub = ChainNodeGrpc.newStub(headChannel);
-    }
-
-    public void shutdown() throws InterruptedException {
-        headChannel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-        tailChannel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
     /**
@@ -76,8 +101,8 @@ public class ChainClient {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        ChainClient client = new ChainClient("localhost", 8980, "localhost", 8982);
+    public static void main(String[] args) throws Exception {
+        ChainClient client = new ChainClient("localhost", 8990);
 
         String putOne = "hello from client";
         String putTwo = "hello again from client";

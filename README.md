@@ -17,16 +17,25 @@ Once installed/built at least one time, re-building/packaging can be done with j
 
 ## Running the Servers
 
-Once the server is built by maven into the jar file in the `ChainNode/target/` directory, it can be run with arguments that specify the chain configuration. The arguments are `port role [head] [successor] [tail]` where the port number is some integer between `[1024, 65535]` (inclusive), the role is one of `{head, center, tail}`, and the remaining arguments identify the relevant servers (in the form of `host:port`) with respect to the one being started. The following commands will configure a three-node chain run on one device with different ports for each:
+Once the server is built by maven into the jar file in the `ChainNode/target/` directory, it can be run with arguments that specify the chain configuration. The arguments are `port role [successor]` where the port number is some integer between `[1024, 65535]` (inclusive), the role is one of `{head, center, tail}`, and the remaining arguments identify the relevant servers (in the form of `host:port`) with respect to the one being started. The following commands will configure a three-node chain run on one device with different ports for each:
 
 ```shell
-$ java -jar ChainNode\target\chain-node-dev-jar-with-dependencies.jar 8980 head localhost:8981 localhost:8982
-$ java -jar ChainNode\target\chain-node-dev-jar-with-dependencies.jar 8981 middle localhost:8980 localhost:8982 localhost:8982
-$ java -jar ChainNode\target\chain-node-dev-jar-with-dependencies.jar 8982 tail localhost:8980
+$ java -jar ChainNode\target\chain-node-dev-jar-with-dependencies.jar 8980 head localhost:8981
+$ java -jar ChainNode\target\chain-node-dev-jar-with-dependencies.jar 8981 middle localhost:8982
+$ java -jar ChainNode\target\chain-node-dev-jar-with-dependencies.jar 8982 tail
 ```
 
 This would create a chain with one node on each of the three ports connected as `{8980 (head)} -> {8981} -> {8982 (tail)}`. This means that a client would need to communicate to `localhost:8980` for "put" requests and `localhost:8982` for "get" requests.
  
+ 
+## Running the Master Server
+
+In order to detect and recover from complete-node failures, the master server must track the state of the chain. It does this with "check heartbeat" RPCs that reorganize the chain when a node stops responding. To start this service, you must provide a file that contains a list of Chain Nodes (`host:port`) in order from head to tail. An example is provided in [test_chain.txt](ChainMaster/src/main/resources/test_chain.txt) that matches the example commands in [Running the Servers](#running-the-servers). The following command will run the master server on port `8990` using this example configuration file:
+
+```shell
+$ java -jar ChainMaster\target\chain-master-dev-jar-with-dependencies.jar 8990 ChainMaster\src\main\resources\test_chain.txt
+```
+
 ## Running the Client
 
-The client is currently written just to interface with the system as a string store. When run as an application (i.e., `java -jar ChainClient\target\chain-client-dev-jar-with-dependencies.jar`), it will just run a very basic integration test against a chain that is assumed to be running like the example commands in [Running the Servers](#Running-the-Servers). It will print `SUCCESS` if the chain returns values expected by the client.
+The client is currently written just to interface with the system as a string store. When run as an application (i.e., `java -jar ChainClient\target\chain-client-dev-jar-with-dependencies.jar`), it will just run a very basic integration test against a chain that is assumed to be running like the example commands in [Running the Servers](#running-the-servers) and [Running the Master Server](#running-the-master-server). It will print `SUCCESS` if the chain returns values expected by the client.

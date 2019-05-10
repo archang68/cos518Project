@@ -31,6 +31,12 @@
             <version>dev</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>COS518.group-zero</groupId>
+            <artifactId>chain-master</artifactId>
+            <version>dev</version>
+            <scope>compile</scope>
+        </dependency>
 
     </dependencies>
 </project>

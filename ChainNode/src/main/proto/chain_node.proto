@@ -10,12 +10,14 @@ service ChainNode {
 
     // receive a propagated write from predecessor and send to successor
     rpc PropagateWrite(CRPut) returns (CRObjectResponse) {}
-    // update the node's internal state for correct head node
-    rpc UpdateHeadNode(CRNodeID) returns (UpdateStatus) {}
+    // update the node's role to head node
+    rpc UpdateHeadNode(UpdateRoleMessage) returns (UpdateStatus) {}
     // update the node's internal state for correct successor
     rpc UpdateSuccessor(CRNodeID) returns (UpdateStatus) {}
-    // update the node's internal state for correct tail node
-    rpc UpdateTailNode(CRNodeID) returns (UpdateStatus) {}
+    // update the node's role to tail node
+    rpc UpdateTailNode(UpdateRoleMessage) returns (UpdateStatus) {}
+    // check the status of the node for fault detection
+    rpc CheckHeartbeat(CheckAliveMessage) returns (Heartbeat) {}
 }
 
 message CRObjectResponse {
@@ -43,4 +45,11 @@ message CRNodeID {
 
 message UpdateStatus {
     bool success = 1;
+}
+
+message UpdateRoleMessage {}
+
+message CheckAliveMessage {}
+message Heartbeat {
+    bool alive = 1;
 }

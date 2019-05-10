@@ -2,6 +2,8 @@ package COS518.GroupZero.ChainReplication;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+import io.grpc.stub.StreamObservers;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -58,65 +60,115 @@ public class RemoteNodeRPC {
         return blockingStub.propagateWrite(request);
     }
 
-    /**
-     * Blocking RPC to update the node's head node configuration.
-     *
-     * @param host ipv4 address of the new head node
-     * @param port tcp port of the new head node
-     * @return true if the update occurred successfully
-     * @throws UnknownHostException if the host cannot be converted properly to an integer
-     */
-    public boolean blockingUpdateHeadNode(String host, int port) throws UnknownHostException {
-        // package the host ip address to an integer
-        int addressInt = stringToIP(host);
-        // create the request object with the correct ip and port
-        CRNodeID nodeID = CRNodeID.newBuilder().setAddress(addressInt).setPort(port).build();
 
-        // sent the request, wait for the response, and return the status
-        UpdateStatus response = blockingStub.updateHeadNode(nodeID);
-        return response.getSuccess();
+    public void nonBlockingUpdateHeadNode() {
+        asyncStub.updateHeadNode(UpdateRoleMessage.getDefaultInstance(), new StreamObserver<UpdateStatus>() {
+            @Override
+            public void onNext(UpdateStatus updateStatus) {}
+
+            @Override
+            public void onError(Throwable throwable) {}
+
+            @Override
+            public void onCompleted() {}
+        });
     }
 
-    /**
-     * Blocking RPC to update the node's successor configuration.
-     *
-     * @param host ipv4 address of the new successor
-     * @param port tcp port of the new successor
-     * @return true if the update occurred successfully
-     * @throws UnknownHostException if the host cannot be converted properly to an integer
-     */
-    public boolean blockingUpdateSuccessor(String host, int port) throws UnknownHostException {
-        // package the host ip address to an integer
-        int addressInt = stringToIP(host);
-        // create the request object with the correct ip and port
-        CRNodeID nodeID = CRNodeID.newBuilder().setAddress(addressInt).setPort(port).build();
+    public void nonBlockingUpdateSuccessor(CRNodeID nodeID) {
+        asyncStub.updateSuccessor(nodeID, new StreamObserver<UpdateStatus>() {
+            @Override
+            public void onNext(UpdateStatus updateStatus) {}
 
-        // sent the request, wait for the response, and return the status
-        UpdateStatus response = blockingStub.updateSuccessor(nodeID);
-        return response.getSuccess();
+            @Override
+            public void onError(Throwable throwable) {}
+
+            @Override
+            public void onCompleted() {}
+        });
     }
 
-    /**
-     * Blocking RPC to update the node's tail node configuration.
-     *
-     * @param host ipv4 address of the new tail node
-     * @param port tcp port of the new tail node
-     * @return true if the update occurred successfully
-     * @throws UnknownHostException if the host cannot be converted properly to an integer
-     */
-    public boolean blockingUpdateTailNode(String host, int port) throws UnknownHostException {
-        // package the host ip address to an integer
-        int addressInt = stringToIP(host);
-        // create the request object with the correct ip and port
-        CRNodeID nodeID = CRNodeID.newBuilder().setAddress(addressInt).setPort(port).build();
+    public void nonBlockingUpdateTailNode() {
+        asyncStub.updateTailNode(UpdateRoleMessage.getDefaultInstance(), new StreamObserver<UpdateStatus>() {
+            @Override
+            public void onNext(UpdateStatus updateStatus) {}
 
-        // sent the request, wait for the response, and return the status
-        UpdateStatus response = blockingStub.updateTailNode(nodeID);
-        return response.getSuccess();
+            @Override
+            public void onError(Throwable throwable) {}
+
+            @Override
+            public void onCompleted() {}
+        });
     }
+
+//    /**
+//     * Blocking RPC to update the node's head node configuration.
+//     *
+//     * @param host ipv4 address of the new head node
+//     * @param port tcp port of the new head node
+//     * @return true if the update occurred successfully
+//     * @throws UnknownHostException if the host cannot be converted properly to an integer
+//     */
+//    public boolean blockingUpdateHeadNode(String host, int port) throws UnknownHostException {
+//        // package the host ip address to an integer
+//        int addressInt = stringToIP(host);
+//        // create the request object with the correct ip and port
+//        CRNodeID nodeID = CRNodeID.newBuilder().setAddress(addressInt).setPort(port).build();
+//
+//        // sent the request, wait for the response, and return the status
+//        UpdateStatus response = blockingStub.updateHeadNode(nodeID);
+//        return response.getSuccess();
+//    }
+
+//    /**
+//     * Blocking RPC to update the node's successor configuration.
+//     *
+//     * @param nodeID identifier for new successor
+//     * @return true if the update occurred successfully
+//     */
+//    public boolean blockingUpdateSuccessor(CRNodeID nodeID) {
+//        // sent the request, wait for the response, and return the status
+//        UpdateStatus response = blockingStub.updateSuccessor(nodeID);
+//        return response.getSuccess();
+//    }
+
+//    /**
+//     * Blocking RPC to update the node's tail node configuration.
+//     *
+//     * @param host ipv4 address of the new tail node
+//     * @param port tcp port of the new tail node
+//     * @return true if the update occurred successfully
+//     * @throws UnknownHostException if the host cannot be converted properly to an integer
+//     */
+//    public boolean blockingUpdateTailNode(String host, int port) throws UnknownHostException {
+//        // package the host ip address to an integer
+//        int addressInt = stringToIP(host);
+//        // create the request object with the correct ip and port
+//        CRNodeID nodeID = CRNodeID.newBuilder().setAddress(addressInt).setPort(port).build();
+//
+//        // sent the request, wait for the response, and return the status
+//        UpdateStatus response = blockingStub.updateTailNode(nodeID);
+//        return response.getSuccess();
+//    }
 
     public CRNodeID getID() {
         return CRNodeID.newBuilder().setAddress(ip).setPort(port).build();
+    }
+
+    /**
+     * Check that this node is alive and responding to requests without affecting any state.
+     *
+     * @return true iff the server replies successfully with an 'alive' heartbeat
+     */
+    public boolean checkHeartbeat() {
+        boolean isAlive;
+
+        try {
+            isAlive = blockingStub.checkHeartbeat(CheckAliveMessage.newBuilder().build()).getAlive();
+        } catch (Exception ex) {
+            isAlive = false;
+        }
+
+        return isAlive;
     }
 
     /**
