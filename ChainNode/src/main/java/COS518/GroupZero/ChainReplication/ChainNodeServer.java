@@ -6,6 +6,9 @@ import io.grpc.stub.StreamObserver;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -16,8 +19,6 @@ public class ChainNodeServer {
     private final int port;
     private final Server rpcServer;
 
-    // Private booleans defining the status of a chain node, whether it is a tail
-    // or head node or not...
     private boolean isHead;
     private boolean isTail;
 
@@ -115,75 +116,91 @@ public class ChainNodeServer {
          * Temporary in-memory object store. Currently implemented with ConcurrentHashMap, which uses read-write
          * locking for per-key write mutual exclusion.
          */
-        private ConcurrentHashMap<Integer, CRObject> objectStore = new ConcurrentHashMap<>();
+        private final ConcurrentHashMap<Integer, CRObject> objectStore = new ConcurrentHashMap<>();
 
         /**
-         * This is a special in-memory object store that is used for tracking writes that need to be propagated across
-         * the nodes
+         * Contains objects that have been sent to successor but not committed at tail.
          */
-        private ConcurrentHashMap<Integer, CRObject> tempObjectStore = new ConcurrentHashMap<>();
+        private final List<CRPut> pendingList = new LinkedList<>();
 
         @Override
         public void putObject(CRPut request, StreamObserver<CRObjectResponse> responseObserver) {
-            logger.info("received put request for key " + request.getKey());
+            logger.info("received put request for key: " + request.getKey());
             if (isHead) {
-                // insert object into local store
-                CRObjectResponse inserted = doInsert(request.getKey(), request.getObject());
+                // insert object into local store doInsert(request.getKey(), request.getObject());
+                CRObjectResponse objectResponse;
 
                 // propagate object to chain (unless head is also tail)
-                if (!isTail)
-                    inserted = successorNode.blockingPropagateWrite(request);
+                if (!isTail) {
+                    // add to pending list
+                    synchronized (pendingList) {
+                        pendingList.add(0, request);
+                    }
 
-                // return the object to requester after propagation
-                responseObserver.onNext(inserted);
-                responseObserver.onCompleted();
+                    // propagate and wait for commit
+                    objectResponse = successorNode.blockingPropagateWrite(request);
 
+                    // remove from pending list if successful
+                    if (objectResponse != null) {
+                        synchronized (pendingList) {
+                            pendingList.remove(request);
+                        }
+                    }
+                }
+
+                // write to object store after commit confirmed
+                objectResponse = doInsert(request.getKey(), request.getObject());
+                responseObserver.onNext(objectResponse);
             } else {
-                // TODO: deny or forward?
                 System.err.println("non-head node received putObject request");
-                System.exit(-1);
-
-                // Referring the request to the head node
-                // responseObserver.onNext(headNode.blockingPropagateWrite(request));
-                // responseObserver.onCompleted();
-
+                responseObserver.onError(new IllegalAccessError("non-head node received putObject request"));
             }
+
+            responseObserver.onCompleted();
         }
 
         @Override
         public void getObject(CRKey request, StreamObserver<CRObjectResponse> responseObserver) {
-            logger.info("received get request for key " + request.getKey());
+            logger.info("received get request for key: " + request.getKey());
+
             if (isTail) {
                 responseObserver.onNext(doRetrieve(request));
-                responseObserver.onCompleted();
             } else {
-                // TODO: deny or forward?
                 System.err.println("non-tail node received getObject request");
-                System.exit(-1);
-
-                // forwarding the request to the tail node
-                // responseObserver.onNext(tailNode.blockingPropagateRead(request));
-                // responseObserver.onCompleted();
+                responseObserver.onError(new IllegalAccessError("non-tail node received getObject request"));
             }
+
+            responseObserver.onCompleted();
         }
 
         @Override
         public void propagateWrite(CRPut request, StreamObserver<CRObjectResponse> responseObserver) {
-            logger.info("received write-propagate request for key " + request.getKey());
+            logger.info("received write-propagate request for key: " + request.getKey());
 
-            // writing the key, value pair to local storage
-            CRObjectResponse inserted = doInsert(request.getKey(), request.getObject());
+            CRObjectResponse objectResponse;
 
             if (!isTail) {
-                // if not the tail node, propagate to successor
-                CRObjectResponse propagated = successorNode.blockingPropagateWrite(request);
-                responseObserver.onNext(propagated);
-            } else {
-                // if tail, just respond with inserted (return up the chain)
-                responseObserver.onNext(inserted);
+                // add to pending list
+                synchronized (pendingList) {
+                    pendingList.add(0, request);
+                }
+
+                // propagate and wait for commit
+                objectResponse = successorNode.blockingPropagateWrite(request);
+
+                // remove from pending list if successful
+                if (objectResponse != null) {
+                    synchronized (pendingList) {
+                        pendingList.remove(request);
+                    }
+                }
             }
 
+            // write to object store
+            objectResponse = doInsert(request.getKey(), request.getObject());
+
             // completed operation
+            responseObserver.onNext(objectResponse);
             responseObserver.onCompleted();
         }
 
