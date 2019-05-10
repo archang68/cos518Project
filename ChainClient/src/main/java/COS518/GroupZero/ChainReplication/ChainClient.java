@@ -8,6 +8,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.Random;
 
 public class ChainClient {
     private static final Logger logger = Logger.getLogger(ChainClient.class.getName());
@@ -104,27 +105,69 @@ public class ChainClient {
     public static void main(String[] args) throws Exception {
         ChainClient client = new ChainClient("localhost", 8990);
 
-        String putOne = "hello from client";
-        String putTwo = "hello again from client";
+        // We expect two command line arguments to our client (we are utilizing this as a
+        // test client)
 
-        client.putString(1, putOne);
-        client.putString(1, putTwo);
+        // java ChainClient [number of total requests to be made by the client] [percentage of reads]
 
-        String gotOne = client.getString(1);
-        String gotTwo = client.getString(2);
-
-        boolean error = false;
-
-        if (gotTwo != null) {
-            System.err.println("empty key did not return null, got: " + gotTwo);
-            error = true;
+        if (args.length != 2) {
+            throw new IllegalArgumentException("Incorrect number of arguments.");
         }
 
-        if (!gotOne.equals(putTwo)) {
-            System.err.println("key meant to contain: " + putTwo);
-            System.err.println("key actually contained: " + gotOne);
-            error = true;
+        int numRequests = Integer.parseInt(args[0]);
+        int percRead = Integer.parseInt(args[1]);
+
+        // The client will continue to send requests
+        String dummyString = "value";
+
+        // Random number generator to determine whether or not to send a read/write
+        Random r = new Random();
+
+        int numReadsDone = 0;
+        int numWritesDone = 0;
+
+        int intendedReads = (numRequests * percRead)/100;
+        int intendedWrites = (numRequests * (100 - percRead))/100;
+
+        for (int i = 0; i < numRequests; ) {
+
+            // Randomly interspersing reads and writes
+            if (numReadsDone <= intendedReads && r.nextInt(100) < percRead) {
+                client.putString(i, dummyString + i);
+                numReadsDone++;
+                i++;
+            } else if (numWritesDone <= intendedWrites) {
+
+                int potentialKey = r.nextInt(i);
+                String retrieved = client.getString(i);
+
+                numWritesDone++;
+                i++;
+            }
+
         }
+
+//        String putOne = "hello from client";
+//        String putTwo = "hello again from client";
+//
+//        client.putString(1, putOne);
+//        client.putString(1, putTwo);
+//
+//        String gotOne = client.getString(1);
+//        String gotTwo = client.getString(2);
+//
+//        boolean error = false;
+//
+//        if (gotTwo != null) {
+//            System.err.println("empty key did not return null, got: " + gotTwo);
+//            error = true;
+//        }
+//
+//        if (!gotOne.equals(putTwo)) {
+//            System.err.println("key meant to contain: " + putTwo);
+//            System.err.println("key actually contained: " + gotOne);
+//            error = true;
+//        }
 
         client.shutdown();
 
