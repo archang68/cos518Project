@@ -32,16 +32,21 @@ cpu_data_t5_filter$CPU[cpu_data_t5_filter$CPU == 4] <- "tail (n5)"
 cpu_data_t5_filter$noNumLoad <- cpu_data_t5_filter$load
 cpu_data_t5_filter$load <- paste(cpu_data_t5_filter$load, "% Writes", sep="")
 
-cpu_mem_plot_t5_idle <- ggplot(cpu_data_t5_filter, aes (y = X.idle, x = CPU, fill = CPU)) +
-  theme(legend.position = "none", axis.text.x = element_blank()) + 
+cpu_mem_plot_t5_idle <- ggplot(cpu_data_t5_filter, aes (y = 100 - X.idle, x = CPU, fill = CPU)) +
+  theme(legend.position = "none") + 
   geom_bar(position = "dodge", stat = "identity") +
   geom_text(aes(label= X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
   facet_wrap(~load) +
-  ylab("% idle") + 
+  ylab("% CPU Usage") + 
   xlab("Node")
 
 cpu_mem_plot_t5_idle
 
+ggsave("cpu_plot_t5_usage_total.png", width = 8, height = 5)
+```
+
+# User/System Plot - basically not using these
+```{r}
 cpu_mem_plot_t5_user <- ggplot(cpu_data_t5_filter, aes (y = X.user, x = CPU, fill = CPU)) +
   geom_bar(position = "dodge", stat = "identity") +
   geom_text(aes(label= X.user), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
@@ -66,11 +71,11 @@ cpu_mem_plot_t5_system
 ```{r}
 #alternative plotting, per node vs per utilization
 
-cpu_plot_t5_all <- ggplot(cpu_data_t5_filter, aes(y = X.user, x = noNumLoad, fill = load)) +
+cpu_plot_t5_all <- ggplot(cpu_data_t5_filter, aes(y = 100 - X.idle, x = noNumLoad, fill = load)) +
   geom_bar(position = "dodge", stat = "identity") +
   theme(legend.position = "none") + 
   facet_wrap(~CPU, nrow = 1) +
-  ylab("% User") + 
+  ylab("% CPU Usage") + 
   xlab("% Writes")
 
 cpu_plot_t5_all
