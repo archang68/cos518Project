@@ -30,7 +30,7 @@ for i, port in enumerate(ports):
             'ChainNode/target/chain-node-dev-jar-with-dependencies.jar',
             str(port),
             'head',
-            'localhost:{SUCCESSOR_PORT}'.format(SUCCESSOR_PORT=ports[i])
+            'localhost:{SUCCESSOR_PORT}'.format(SUCCESSOR_PORT=ports[i+1])
         ], stdout=output, stderr=output))
     elif i == (len(ports) - 1):
         nodes.append(Popen([
@@ -51,7 +51,7 @@ for i, port in enumerate(ports):
             'ChainNode/target/chain-node-dev-jar-with-dependencies.jar',
             str(port),
             'middle',
-            'localhost:{SUCCESSOR_PORT}'.format(SUCCESSOR_PORT=ports[i])
+            'localhost:{SUCCESSOR_PORT}'.format(SUCCESSOR_PORT=ports[i+1])
         ], stdout=output, stderr=output))
 
 master = Popen([
