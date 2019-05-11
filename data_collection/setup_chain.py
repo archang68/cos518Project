@@ -67,7 +67,7 @@ master = Popen([
 while input('Press enter to kill nodes'):
     print('non-enter key pressed')
 
-print('killing nodes')
-master.kill()
+print('terminating nodes')
+master.terminate()
 for node in nodes:
-    node.kill()
+    node.terminate()

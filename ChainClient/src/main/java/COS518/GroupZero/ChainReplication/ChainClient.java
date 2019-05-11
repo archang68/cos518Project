@@ -103,25 +103,26 @@ public class ChainClient {
     }
 
     public static void main(String[] args) throws Exception {
-        ChainClient client = new ChainClient("localhost", 8990);
+        ChainClient client = new ChainClient("localhost", 9000);
 
         // We expect two command line arguments to our client (we are utilizing this as a
         // test client)
 
         // java ChainClient [number of total requests to be made by the client] [percentage of reads]
 
-        if (args.length != 2) {
+        if (args.length != 3) {
             throw new IllegalArgumentException("Incorrect number of arguments.");
         }
 
         int numRequests = Integer.parseInt(args[0]);
         int percRead = Integer.parseInt(args[1]);
+	int seed = Integer.parseInt(args[2]);
 
         // The client will continue to send requests
         String dummyString = "value";
 
         // Random number generator to determine whether or not to send a read/write
-        Random r = new Random();
+        Random r = new Random(seed);
 
         int numReadsDone = 0;
         int numWritesDone = 0;
