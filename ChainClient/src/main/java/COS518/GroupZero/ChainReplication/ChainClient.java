@@ -116,7 +116,7 @@ public class ChainClient {
 
         int numRequests = Integer.parseInt(args[0]);
         int percRead = Integer.parseInt(args[1]);
-	int seed = Integer.parseInt(args[2]);
+	    int seed = Integer.parseInt(args[2]);
 
         // The client will continue to send requests
         String dummyString = "value";
@@ -140,7 +140,7 @@ public class ChainClient {
             } else if (numWritesDone <= intendedWrites) {
 
                 int potentialKey = r.nextInt(i);
-                String retrieved = client.getString(i);
+                String retrieved = client.getString(potentialKey);
 
                 numWritesDone++;
                 i++;
