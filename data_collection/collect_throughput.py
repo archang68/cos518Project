@@ -2,7 +2,7 @@ from datetime import datetime
 from subprocess import Popen
 
 # WORKLOADS = range(0, 105, 5)
-WORKLOADS = [75]
+WORKLOADS = [25]
 NUM_CLIENTS = 5
 REQUESTS_PER_CLIENT = 10000
 
