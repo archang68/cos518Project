@@ -132,7 +132,7 @@ public class ChainClient {
 
             } else {
 
-                int potentialKey = r.nextInt(i);
+                int potentialKey = r.nextInt(numRequests);
                 String retrieved = client.getString(potentialKey);
 
             }
