@@ -1,0 +1,163 @@
+---
+title: "Evaluation_518"
+author: "Allison Chang"
+date: "5/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+install.packages("ggplot2")
+install.packages("reshape")
+install.packages("gridExtra")
+
+library(reshape)
+library(gridExtra)
+library(ggplot2)
+```
+## CPU utilization per Node
+
+```{r}
+cpu_data <- read.csv("dummy_cpu_data.csv", row.names = 1, header = TRUE);
+t <- melt(t(cpu_data))
+
+cpu_mem_plot <- ggplot(t, aes (y = value, x = X2, color = X2, fill = X2)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  facet_wrap(~X1)
+
+cpu_mem_plot
+```
+
+```{r}
+
+t2 <- melt(t(cpu_data[1,]))
+basic_cpu <- ggplot(t2, aes(x = X1, y = value, fill = X1)) +
+  theme(legend.position = "none") + 
+  geom_bar(stat = "identity") +
+  ylab("% CPU Utilization") +
+  xlab("Core")
+
+basic_cpu
+```
+
+```{r}
+t3 <- melt(t(cpu_data[2,]))
+basic_mem <- ggplot(t3, aes(x = X1, y = value, fill = X1)) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(position = "right") + 
+  geom_bar(stat = "identity") +
+  ylab("Memory Utilization") +
+  xlab("Core") 
+
+basic_mem
+
+```
+
+### Combined plots
+```{r}
+grid.arrange(basic_cpu, basic_mem,
+             basic_cpu, basic_mem,
+             basic_cpu, basic_mem, nrow = 3, ncol = 2)
+
+g = arrangeGrob(basic_cpu, basic_mem,
+             basic_cpu, basic_mem,
+             basic_cpu, basic_mem, nrow = 3, ncol = 2)
+
+ggsave(file = "compiled_cpu_mem.pdf", g)
+```
+
+## Throughput vs. workload type
+
+```{r}
+# t = 3
+throughput_data_t3 <- read.table("throughput_workload_t3.csv", sep = ",");
+throughput_data_t3$average = rowSums(throughput_data_t3[,2:7])/6
+throughput_data_t3$throughput = (10000 * 1000)/throughput_data_t3$average
+
+throughput_plot_t3 <- ggplot(data = throughput_data_t3, 
+                          aes(x = V1, y = throughput)) +
+  scale_x_continuous(name = "% Writes", 
+                   breaks = c(seq(0,100,5))) + 
+  geom_line() +
+  geom_point() + 
+  ylab("Throughput")
+
+throughput_plot_t3
+```
+
+```{r}
+# t = 5
+
+throughput_data_t5 <- read.table("throughput_workload_t5.csv", sep = ",");
+throughput_data_t5$average = rowSums(throughput_data_t5[,2:7])/6
+throughput_data_t5$throughput = (10000 * 1000)/throughput_data_t5$average
+
+
+throughput_plot_t5 <- ggplot(data = throughput_data_t5, 
+                          aes(x = V1, y = throughput)) +
+  scale_x_continuous(name = "% Writes", 
+                   breaks = c(seq(0,100,5))) + 
+  geom_line() +
+  geom_point() + 
+  ylab("Throughput")
+
+throughput_plot_t5
+```
+
+```{r}
+# t = 7
+throughput_data_t7 <- read.table("throughput_workload_t7.csv", sep = ",");
+throughput_data_t7$average = rowSums(throughput_data_t7[,2:7])/6
+throughput_data_t7$throughput = (10000 * 1000)/throughput_data_t7$average
+
+throughput_plot_t7 <- ggplot(data = throughput_data_t7, 
+                          aes(x = V1, y = throughput)) +
+  scale_x_continuous(name = "% Writes", 
+                   breaks = c(seq(0,100,5))) + 
+  geom_line() +
+  geom_point() + 
+  ylab("Throughput")
+
+throughput_plot_t7
+
+```
+
+```{r}
+# t = 9
+throughput_data_t9 <- read.table("throughput_workload_t9.csv", sep = ",");
+throughput_data_t9$average = rowSums(throughput_data_t9[,2:7])/6
+throughput_data_t9$throughput = (10000 * 1000)/throughput_data_t9$average
+
+throughput_plot_t9 <- ggplot(data = throughput_data_t9, 
+                          aes(x = V1, y = throughput)) +
+  scale_x_continuous(name = "% Writes", 
+                   breaks = c(seq(0,100,5))) + 
+  geom_line() +
+  geom_point() + 
+  ylab("Throughput")
+
+throughput_plot_t9
+
+```
+
+```{r}
+
+combined_results_throughput = data.frame("ratio" = throughput_data_t3$V1, 
+                                         "t3" = throughput_data_t3$throughput, 
+                                         "t5" = throughput_data_t5$throughput, 
+                                         "t7" = throughput_data_t7$throughput,
+                                         "t9" = throughput_data_t9$throughput)
+
+m = melt(combined_results_throughput, id.vars = "ratio")
+m$NumNodes = m$variable
+
+aggregate_throughput <- ggplot(data = m, aes (x = ratio, y = value, colour = NumNodes)) + 
+  geom_line() + 
+  geom_point() + 
+  scale_x_continuous(name = "% Writes", breaks = c(seq(0,100,5))) + 
+  ylab("Throughput (requests/s)") 
+
+aggregate_throughput
+ggsave("aggregate_throughput.png", width = 7, height = 5)
+```
