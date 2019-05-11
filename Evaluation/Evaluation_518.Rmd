@@ -19,52 +19,78 @@ library(ggplot2)
 ## CPU utilization per Node
 
 ```{r}
-cpu_data <- read.csv("dummy_cpu_data.csv", row.names = 1, header = TRUE);
-t <- melt(t(cpu_data))
 
-cpu_mem_plot <- ggplot(t, aes (y = value, x = X2, color = X2, fill = X2)) +
+cpu_data_t5 <- read.csv("/Users/Allison/Desktop/Masters/1 - COS 518/Final Project/cos518Project/data_collection/t5_cpu_aggregate.csv", header = T);
+cpu_data_t5_filter <- cpu_data_t5[cpu_data_t5$CPU < 5,]
+
+cpu_data_t5_filter$CPU[cpu_data_t5_filter$CPU == 0] <- "head (n1)"
+cpu_data_t5_filter$CPU[cpu_data_t5_filter$CPU == 1] <- "n2"
+cpu_data_t5_filter$CPU[cpu_data_t5_filter$CPU == 2] <- "n3"
+cpu_data_t5_filter$CPU[cpu_data_t5_filter$CPU == 3] <- "n4"
+cpu_data_t5_filter$CPU[cpu_data_t5_filter$CPU == 4] <- "tail (n5)"
+
+cpu_data_t5_filter$noNumLoad <- cpu_data_t5_filter$load
+cpu_data_t5_filter$load <- paste(cpu_data_t5_filter$load, "% Writes", sep="")
+
+cpu_mem_plot_t5_idle <- ggplot(cpu_data_t5_filter, aes (y = X.idle, x = CPU, fill = CPU)) +
+  theme(legend.position = "none", axis.text.x = element_blank()) + 
   geom_bar(position = "dodge", stat = "identity") +
-  facet_wrap(~X1)
+  geom_text(aes(label= X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
+  facet_wrap(~load) +
+  ylab("% idle") + 
+  xlab("Node")
 
-cpu_mem_plot
+cpu_mem_plot_t5_idle
+
+cpu_mem_plot_t5_user <- ggplot(cpu_data_t5_filter, aes (y = X.user, x = CPU, fill = CPU)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label= X.user), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
+  theme(legend.position = "none") + 
+  facet_wrap(~load) +
+  ylab("% user") +
+  xlab("Node")
+
+cpu_mem_plot_t5_user
+
+cpu_mem_plot_t5_system <- ggplot(cpu_data_t5_filter, aes (y = X.system, x = CPU, fill = CPU)) +
+  theme(legend.position = "none") + 
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label= X.system), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
+  facet_wrap(~load) +
+  ylab("% system") +
+  xlab("Node")
+
+cpu_mem_plot_t5_system
 ```
 
 ```{r}
+#alternative plotting, per node vs per utilization
 
-t2 <- melt(t(cpu_data[1,]))
-basic_cpu <- ggplot(t2, aes(x = X1, y = value, fill = X1)) +
+cpu_plot_t5_all <- ggplot(cpu_data_t5_filter, aes(y = X.user, x = noNumLoad, fill = load)) +
+  geom_bar(position = "dodge", stat = "identity") +
   theme(legend.position = "none") + 
-  geom_bar(stat = "identity") +
-  ylab("% CPU Utilization") +
-  xlab("Core")
+  facet_wrap(~CPU, nrow = 1) +
+  ylab("% User") + 
+  xlab("% Writes")
 
-basic_cpu
-```
+cpu_plot_t5_all
 
-```{r}
-t3 <- melt(t(cpu_data[2,]))
-basic_mem <- ggplot(t3, aes(x = X1, y = value, fill = X1)) +
-  theme(legend.position = "none") + 
-  scale_y_continuous(position = "right") + 
-  geom_bar(stat = "identity") +
-  ylab("Memory Utilization") +
-  xlab("Core") 
-
-basic_mem
-
+ggsave("cpu_plot_t5_all.png", width = 10, height = 5)
 ```
 
 ### Combined plots
 ```{r}
-grid.arrange(basic_cpu, basic_mem,
-             basic_cpu, basic_mem,
-             basic_cpu, basic_mem, nrow = 3, ncol = 2)
+grid.arrange(cpu_mem_plot_t5_idle,
+             cpu_mem_plot_t5_system,
+             cpu_mem_plot_t5_user, nrow = 3)
 
-g = arrangeGrob(basic_cpu, basic_mem,
-             basic_cpu, basic_mem,
-             basic_cpu, basic_mem, nrow = 3, ncol = 2)
+g = arrangeGrob(cpu_mem_plot_t5_idle,
+                cpu_mem_plot_t5_system,
+                cpu_mem_plot_t5_user, nrow = 3)
 
-ggsave(file = "compiled_cpu_mem.pdf", g)
+g
+
+ggsave(file = "compiled_cpu_mem_t5_v3.png", g, width = 9, height = 12)
 ```
 
 ## Throughput vs. workload type
