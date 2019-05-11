@@ -35,7 +35,7 @@ cpu_data_t5_filter$load <- paste(cpu_data_t5_filter$load, "% Writes", sep="")
 cpu_mem_plot_t5_idle <- ggplot(cpu_data_t5_filter, aes (y = 100 - X.idle, x = CPU, fill = CPU)) +
   theme(legend.position = "none") + 
   geom_bar(position = "dodge", stat = "identity") +
-  geom_text(aes(label= X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
+  geom_text(aes(label= 100 - X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
   facet_wrap(~load) +
   ylab("% CPU Usage") + 
   xlab("Node")
@@ -73,6 +73,7 @@ cpu_mem_plot_t5_system
 
 cpu_plot_t5_all <- ggplot(cpu_data_t5_filter, aes(y = 100 - X.idle, x = noNumLoad, fill = load)) +
   geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label= 100 - X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
   theme(legend.position = "none") + 
   facet_wrap(~CPU, nrow = 1) +
   ylab("% CPU Usage") + 
@@ -123,7 +124,6 @@ throughput_plot_t3
 throughput_data_t5 <- read.table("throughput_workload_t5.csv", sep = ",");
 throughput_data_t5$average = rowSums(throughput_data_t5[,2:7])/6
 throughput_data_t5$throughput = (10000 * 1000)/throughput_data_t5$average
-
 
 throughput_plot_t5 <- ggplot(data = throughput_data_t5, 
                           aes(x = V1, y = throughput)) +
