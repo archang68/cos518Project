@@ -1,7 +1,8 @@
 from datetime import datetime
 from subprocess import Popen
 
-WORKLOADS = range(0, 105, 5)
+# WORKLOADS = range(0, 105, 5)
+WORKLOADS = [75]
 NUM_CLIENTS = 5
 REQUESTS_PER_CLIENT = 10000
 
@@ -13,7 +14,7 @@ for workload in reversed(WORKLOADS):
     end_times = []
     client_times = []
 
-    for i in range(NUM_CLIENTS):
+    for i in range(NUM_CLIENTS + 1):
         current_core_mask = hex(0x1 << (14 - i))
 
         command = [

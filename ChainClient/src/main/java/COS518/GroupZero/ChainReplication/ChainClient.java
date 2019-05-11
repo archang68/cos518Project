@@ -116,7 +116,7 @@ public class ChainClient {
 
         int numRequests = Integer.parseInt(args[0]);
         int percRead = Integer.parseInt(args[1]);
-	    int seed = Integer.parseInt(args[2]);
+        int seed = Integer.parseInt(args[2]);
 
         // The client will continue to send requests
         String dummyString = "value";
@@ -125,14 +125,12 @@ public class ChainClient {
         Random r = new Random(seed);
 
         for (int i = 0; i < numRequests; i++) {
+            int potentialKey = r.nextInt(numRequests);
 
             // Randomly interspersing reads and writes
             if (r.nextInt(100) < percRead) {
-                client.putString(i, dummyString + i);
-
+                client.putString(potentialKey, dummyString + i);
             } else {
-
-                int potentialKey = r.nextInt(numRequests);
                 String retrieved = client.getString(potentialKey);
 
             }
