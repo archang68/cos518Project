@@ -16,8 +16,9 @@ library(reshape)
 library(gridExtra)
 library(ggplot2)
 ```
-## CPU utilization per Node
+# CPU utilization per Node
 
+## t = 5
 ```{r}
 
 cpu_data_t5 <- read.csv("/Users/Allison/Desktop/Masters/1 - COS 518/Final Project/cos518Project/data_collection/t5_cpu_aggregate.csv", header = T);
@@ -43,6 +44,67 @@ cpu_mem_plot_t5_idle <- ggplot(cpu_data_t5_filter, aes (y = 100 - X.idle, x = CP
 cpu_mem_plot_t5_idle
 
 ggsave("cpu_plot_t5_usage_total.png", width = 8, height = 5)
+
+#alternative plotting, per node vs per utilization
+
+cpu_plot_t5_all <- ggplot(cpu_data_t5_filter, aes(y = 100 - X.idle, x = noNumLoad, fill = load)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label= 100 - X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
+  theme(legend.position = "none") + 
+  facet_wrap(~CPU, nrow = 1) +
+  ylab("% CPU Usage") + 
+  xlab("% Writes")
+
+cpu_plot_t5_all
+
+ggsave("cpu_plot_t5_all.png", width = 10, height = 5)
+```
+
+## t = 9
+```{r}
+
+cpu_data_t9 <- read.csv("/Users/Allison/Desktop/Masters/1 - COS 518/Final Project/cos518Project/data_collection/t9_cpu_aggregate.csv", header = T);
+cpu_data_t9_filter <- cpu_data_t9[cpu_data_t9$CPU < 9,]
+
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 0] <- "head (n1)"
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 1] <- "n2"
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 2] <- "n3"
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 3] <- "n4"
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 4] <- "n5"
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 5] <- "n6"
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 6] <- "n7"
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 7] <- "n8"
+cpu_data_t9_filter$CPU[cpu_data_t9_filter$CPU == 8] <- "tail (n9)"
+
+cpu_data_t9_filter$noNumLoad <- cpu_data_t9_filter$load
+cpu_data_t9_filter$load <- paste(cpu_data_t9_filter$load, "% Writes", sep="")
+
+cpu_mem_plot_t9_idle <- ggplot(cpu_data_t9_filter, aes (y = 100 - X.idle, x = CPU, fill = CPU)) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = -45)) + 
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label= 100 - X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
+  facet_wrap(~load) +
+  ylab("% CPU Usage") + 
+  xlab("Node")
+
+cpu_mem_plot_t9_idle
+
+ggsave("cpu_plot_t9_usage_total.png", width = 10, height = 5)
+
+#alternative plotting, per node vs per utilization
+
+cpu_plot_t9_all <- ggplot(cpu_data_t9_filter, aes(y = 100 - X.idle, x = noNumLoad, fill = load)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label= 100 - X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
+  theme(legend.position = "none") + 
+  facet_wrap(~CPU, nrow = 3) +
+  ylab("% CPU Usage") + 
+  xlab("% Writes")
+
+cpu_plot_t9_all
+
+ggsave("cpu_plot_t9_all.png", width = 9, height = 9)
+
 ```
 
 # User/System Plot - basically not using these
@@ -66,26 +128,8 @@ cpu_mem_plot_t5_system <- ggplot(cpu_data_t5_filter, aes (y = X.system, x = CPU,
   xlab("Node")
 
 cpu_mem_plot_t5_system
-```
 
-```{r}
-#alternative plotting, per node vs per utilization
-
-cpu_plot_t5_all <- ggplot(cpu_data_t5_filter, aes(y = 100 - X.idle, x = noNumLoad, fill = load)) +
-  geom_bar(position = "dodge", stat = "identity") +
-  geom_text(aes(label= 100 - X.idle), size = 3, position=position_dodge(width=0.5), vjust=-0.25) + 
-  theme(legend.position = "none") + 
-  facet_wrap(~CPU, nrow = 1) +
-  ylab("% CPU Usage") + 
-  xlab("% Writes")
-
-cpu_plot_t5_all
-
-ggsave("cpu_plot_t5_all.png", width = 10, height = 5)
-```
-
-### Combined plots
-```{r}
+# combined plots
 grid.arrange(cpu_mem_plot_t5_idle,
              cpu_mem_plot_t5_system,
              cpu_mem_plot_t5_user, nrow = 3)
@@ -99,7 +143,7 @@ g
 ggsave(file = "compiled_cpu_mem_t5_v3.png", g, width = 9, height = 12)
 ```
 
-## Throughput vs. workload type
+# Throughput vs. workload type
 
 ```{r}
 # t = 3
@@ -172,6 +216,7 @@ throughput_plot_t9
 
 ```
 
+## Actual plot...
 ```{r}
 
 combined_results_throughput = data.frame("ratio" = throughput_data_t3$V1, 
@@ -191,4 +236,53 @@ aggregate_throughput <- ggplot(data = m, aes (x = ratio, y = value, colour = Num
 
 aggregate_throughput
 ggsave("aggregate_throughput.png", width = 7, height = 5)
+```
+
+## CPU utilziation per core type across different t?
+```{r}
+# t = 9 averages
+avg_t9_mid_25 = sum(cpu_data_t9[cpu_data_t9$CPU < 8 & cpu_data_t9$CPU > 0 & cpu_data_t9$load == 25, ]$X.idle)/7
+avg_t9_mid_50 = sum(cpu_data_t9[cpu_data_t9$CPU < 8 & cpu_data_t9$CPU > 0 & cpu_data_t9$load == 50, ]$X.idle)/7
+avg_t9_mid_75 = sum(cpu_data_t9[cpu_data_t9$CPU < 8 & cpu_data_t9$CPU > 0 & cpu_data_t9$load == 75, ]$X.idle)/7
+
+cpu_data_t9_avg = cpu_data_t9[cpu_data_t9$CPU == 0 | cpu_data_t9$CPU == 8, ]
+cpu_data_t9_avg$CPU[cpu_data_t9_avg$CPU == 0] <- "head"
+cpu_data_t9_avg$CPU[cpu_data_t9_avg$CPU == 8] <- "tail"
+
+cpu_data_t9_avg = cpu_data_t9_avg[,c(1,4,5)]
+cpu_data_t9_avg = rbind(cpu_data_t9_avg, c("middle", avg_t9_mid_25, 25))
+cpu_data_t9_avg = rbind(cpu_data_t9_avg, c("middle", avg_t9_mid_50, 50))
+cpu_data_t9_avg = rbind(cpu_data_t9_avg, c("middle", avg_t9_mid_75, 75))
+
+cpu_data_t9_avg$numNodes = "t = 9"
+
+# t = 5 averages
+avg_t5_mid_25 = sum(cpu_data_t5[cpu_data_t5$CPU < 4 & cpu_data_t5$CPU > 0 & cpu_data_t5$load == 25, ]$X.idle)/3
+avg_t5_mid_50 = sum(cpu_data_t5[cpu_data_t5$CPU < 4 & cpu_data_t5$CPU > 0 & cpu_data_t5$load == 50, ]$X.idle)/3
+avg_t5_mid_75 = sum(cpu_data_t5[cpu_data_t5$CPU < 4 & cpu_data_t5$CPU > 0 & cpu_data_t5$load == 75, ]$X.idle)/3
+
+cpu_data_t5_avg = cpu_data_t5[cpu_data_t5$CPU == 0 | cpu_data_t5$CPU == 4, ]
+cpu_data_t5_avg$CPU[cpu_data_t5_avg$CPU == 0] <- "head"
+cpu_data_t5_avg$CPU[cpu_data_t5_avg$CPU == 4] <- "tail"
+
+cpu_data_t5_avg = cpu_data_t5_avg[,c(1,4,5)]
+cpu_data_t5_avg = rbind(cpu_data_t5_avg, c("middle", avg_t5_mid_25, 25))
+cpu_data_t5_avg = rbind(cpu_data_t5_avg, c("middle", avg_t5_mid_50, 50))
+cpu_data_t5_avg = rbind(cpu_data_t5_avg, c("middle", avg_t5_mid_75, 75))
+
+cpu_data_t5_avg$numNodes = "t = 5"
+
+# binding the two data tables together
+cpu_data_avg = rbind(cpu_data_t5_avg, cpu_data_t9_avg)
+cpu_data_avg$X.idle = 100 - as.numeric(cpu_data_avg$X.idle)
+cpu_data_avg$load = paste(cpu_data_avg$load, "% Writes", sep="")
+
+cpu_data_avg_plot <- ggplot(cpu_data_avg, aes (y = X.idle, x = CPU, fill = numNodes)) +
+  geom_bar(position = position_dodge(), stat = "identity") +
+  facet_wrap(~load) +
+  ylab("% CPU Usage") +
+  xlab("Node type")
+
+cpu_data_avg_plot
+
 ```
