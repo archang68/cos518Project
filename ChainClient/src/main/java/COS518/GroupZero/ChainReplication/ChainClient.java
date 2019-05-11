@@ -124,26 +124,17 @@ public class ChainClient {
         // Random number generator to determine whether or not to send a read/write
         Random r = new Random(seed);
 
-        int numReadsDone = 0;
-        int numWritesDone = 0;
-
-        int intendedReads = (numRequests * percRead)/100;
-        int intendedWrites = (numRequests * (100 - percRead))/100;
-
-        for (int i = 0; i < numRequests; ) {
+        for (int i = 0; i < numRequests; i++) {
 
             // Randomly interspersing reads and writes
-            if (numReadsDone <= intendedReads && r.nextInt(100) < percRead) {
+            if (r.nextInt(100) < percRead) {
                 client.putString(i, dummyString + i);
-                numReadsDone++;
-                i++;
-            } else if (numWritesDone <= intendedWrites) {
+
+            } else {
 
                 int potentialKey = r.nextInt(i);
                 String retrieved = client.getString(potentialKey);
 
-                numWritesDone++;
-                i++;
             }
 
         }
