@@ -171,10 +171,10 @@ public class ChainClient {
 
         client.shutdown();
 
-        if (error) {
-            System.err.println("ERROR");
-        } else {
-            System.out.println("SUCCESS");
-        }
+//        if (error) {
+//            System.err.println("ERROR");
+//        } else {
+//            System.out.println("SUCCESS");
+//        }
     }
 }
